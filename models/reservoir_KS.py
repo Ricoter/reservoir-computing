@@ -1,7 +1,5 @@
 import torch
 import numpy as np
-#from rc import RNN
-from torch.autograd import Variable
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 
@@ -23,46 +21,51 @@ def set_spectral_radius(W,  r_spectral, device=torch.device('cpu')):
 
 
 ### PARAMETERS ###
-
 lenX = 80000
-lenY = 1
 learning_rate = 1e-6
 rnn = False
 device = torch.device("cuda")
 D_in, H, D_out = 65, 9000, 65
 dtype = torch.double
 
-### PREPROCESS DATA ###
-print('### PREPROCESS DATA ###')
+    ### PREPROCESS DATA ###
+def preprocess_data(infile='ut.npy'):
+    global lenX, lenY, device, dtype
+    print('### PREPROCESS DATA ###')
 
-# read
-ut = np.load('ut.npy') # array, float64, (65, 100001)
-print('... load array ut:', ut.shape)
+    # read
+    ut = np.load(infile) # array, float64, (65, 100001)
+    print('... load array ut:', ut.shape)
 
-# normalize
-ut = preprocessing.scale(ut) # std=1, mean=0
-print('... nomalize ut:', ut.shape, 'std=', round(ut.std()), 'mean=', round(ut.mean()))
+    # normalize
+    ut = preprocessing.scale(ut) # std=1, mean=0
+    print('... nomalize ut:', ut.shape, 'std=', round(ut.std()), 'mean=', round(ut.mean()))
 
-# slice
-xlist, ylist = [], []
-for i in range(ut.shape[1] - lenX):
-    X, Y = ut[:,i:lenX + i], ut[:,i+lenX:i+lenX+lenY] # (65, 16), (65, 1)
-    xlist.append(X) 
-    ylist.append(Y)
+    # slice
+    xlist, ylist = [], []
+    for i in range(ut.shape[1] - lenX):
+        X, Y = ut[:,i:lenX + i], ut[:,i+lenX:i+lenX+lenY] # (65, 16), (65, 1)
+        xlist.append(X) 
+        ylist.append(Y)
 
-# to-numpy
-xlist, ylist = np.stack(xlist), np.stack(ylist) # (99985,65,16), (99985,65,1)
-print('... slice ut to:\t\t\t x.shape=', xlist.shape, 'y.shape=', xlist.shape)
+    # to-numpy
+    xlist, ylist = np.stack(xlist), np.stack(ylist) # (99985,65,16), (99985,65,1)
+    print('... slice ut to:\t\t\t x.shape=', xlist.shape, 'y.shape=', xlist.shape)
 
-# train test split
-xtrain, xtest, ytrain, ytest = train_test_split(xlist, ylist, test_size=0.2, random_state=4) # (79988,65,16), (19997,65,16), (79988,65,1), (19997,65,1)
-print('... train_size, test_size:\t', xtrain.shape[0], xtest.shape[0])
+    # train test split
+    xtrain, xtest, ytrain, ytest = train_test_split(xlist, ylist, test_size=0.2, random_state=4) # (79988,65,16), (19997,65,16), (79988,65,1), (19997,65,1)
+    print('... train_size, test_size:\t', xtrain.shape[0], xtest.shape[0])
 
-# to-Tensor
-xtrain, xtest, ytrain, ytest = torch.from_numpy(xtrain), torch.from_numpy(xtest), torch.from_numpy(ytrain), torch.from_numpy(ytest)
-xtrain, xtest, ytrain, ytest = xtrain.permute(0,2,1), xtest.permute(0,2,1), ytrain.permute(0,2,1), ytest.permute(0,2,1) 
-print('... to-tensor:\t xtrain, xtest, ytrain, ytest', xtrain.shape, xtest.shape, ytrain.shape, ytest.shape) # (79988, 16, 65), (19997, 16, 65), (79988, 1, 65), (19997, 1, 65)
-xtrain.to(device), ytrain.to(device), xtest.to(device), ytest.to(device)
+    # to-Tensor
+    xtrain, xtest, ytrain, ytest = torch.from_numpy(xtrain), torch.from_numpy(xtest), torch.from_numpy(ytrain), torch.from_numpy(ytest)
+    xtrain, xtest, ytrain, ytest = xtrain.permute(0,2,1), xtest.permute(0,2,1), ytrain.permute(0,2,1), ytest.permute(0,2,1) 
+    print('... to-tensor:\t xtrain, xtest, ytrain, ytest',
+          xtrain.shape, xtest.shape, ytrain.shape, ytest.shape) # (79988, 16, 65), (19997, 16, 65), (79988, 1, 65), (19997, 1, 65)
+
+    return (xtrain.to(device), ytrain.to(device), xtest.to(device), ytest.to(device))
+
+torch.save(preprocess_data(), 'normalized_ut')
+xtrain, ytrain, xtest, ytest = torch.load('normalized_ut')
 
 
 ### BUILD MODEL ####
