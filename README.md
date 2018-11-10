@@ -1,2 +1,2 @@
 # reservoir-computing
-reservoir computing to study choatic time series
+This is a project in which I try reservoir computing to study choatic time series
