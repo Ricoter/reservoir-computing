@@ -11,15 +11,22 @@ def set_spectral_radius(W,  r_spectral, device=torch.device('cpu')):
     # larger spectral-radius implies longer-range interactions   
     # spectral radius > 1 has no echo state property
     
-    check()
-    r_initial = max(abs(torch.eig(W)))
-    W_scaled = W * (r_spectral / r_initial)
     # to-numpy
     #W = W.to(torch.device('cpu')).numpy()
     # current radius
-    #r_initial = max(abs(np.linalg.eigvals(W)))
+    import time
+    tic = time.time()
+    r_initial = max(abs(np.linalg.eigvals(W)))
+    tac = time.time()
+    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
+    toc = time.time()
+    W.to(torch.device('cuda')
+    tuc = time.time()
+    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
+    tek = time.time()
+    print(tic-tac, tac-toc, tuc-tek)
     # scale
-    #W_scaled = W * (r_spectral / r_initial)
+    W_scaled = W * (r_spectral / r_initial)
     # to-Tensor
     #W_scaled = torch.from_numpy(W_scaled)
     
@@ -30,8 +37,8 @@ def set_spectral_radius(W,  r_spectral, device=torch.device('cpu')):
 T = 80000
 r_spectral = 0.4
 learning_rate = 1e-6
-device = torch.device("cuda")
-D_in, H, D_out = 65, 9000, 65
+device = torch.device("cpu")
+D_in, H, D_out = 65, 1000, 65
 dtype = torch.double
 
 ### PREPROCESS DATA ###
@@ -62,7 +69,7 @@ def preprocess_data(infile='ut.npy'):
     return (train.to(device), test.to(device)) 
 
 print('save')
-# torch.save(preprocess_data(), 'normalized_ut')
+torch.save(preprocess_data(), 'normalized_ut')
 print('load')
 train, test = torch.load('normalized_ut')
 print('done')
@@ -79,7 +86,8 @@ Who = torch.randn(H, D_out, device=device, dtype=dtype, requires_grad=True)
 # set spectral radius
 print('... set spectral radius')
 Whh = set_spectral_radius(Whh, r_spectral, device=device)
-
+import sys
+sys.exit()
 ### IMPLEMENT TRAINING LOOP ###
 sweeps = 1
 print('... starting train loop with {} sweeps'.format(sweeps))
