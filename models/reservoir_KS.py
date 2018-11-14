@@ -2,35 +2,7 @@ import torch
 import numpy as np
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
-
-def check():
-    import ipdb
-    ipdb.set_trace()
-
-def set_spectral_radius(W,  r_spectral, device=torch.device('cpu')):
-    # larger spectral-radius implies longer-range interactions   
-    # spectral radius > 1 has no echo state property
-    
-    # to-numpy
-    #W = W.to(torch.device('cpu')).numpy()
-    # current radius
-    import time
-    tic = time.time()
-    r_initial = max(abs(np.linalg.eigvals(W)))
-    tac = time.time()
-    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
-    toc = time.time()
-    W.to(torch.device('cuda')
-    tuc = time.time()
-    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
-    tek = time.time()
-    print(tic-tac, tac-toc, tuc-tek)
-    # scale
-    W_scaled = W * (r_spectral / r_initial)
-    # to-Tensor
-    #W_scaled = torch.from_numpy(W_scaled)
-    
-    return W_scaled.to(device)
+import scipy
 
 
 ### PARAMETERS ###
@@ -41,8 +13,61 @@ device = torch.device("cpu")
 D_in, H, D_out = 65, 1000, 65
 dtype = torch.double
 
+
+def check():
+    import ipdb
+    ipdb.set_trace()
+
+def set_spectral_radius(W,  r_spectral, device=torch.device('cpu')):
+    # larger spectral-radius implies longer-range interactions   
+    # spectral radius > 1 has no echo state property
+    
+    # to-numpy
+    W = W.to(torch.device('cpu')).numpy()
+    #W *= 100
+    #W.astype(int)
+    
+    # current radius
+    import time
+    
+    print(H)
+    # numpy 
+    tic = time.time()
+    r_initial = max(abs(np.linalg.eigvals(W)))
+    tac = time.time()
+    print('numpy:', tic-tac, r_initial)
+
+    # scipy
+    tic = time.time()
+    r_initial = abs(scipy.sparse.linalg.eigs(W, k=1, return_eigenvectors=False))
+    tac = time.time()
+    print('scipy:', tic-tac, r_initial)
+
+    # torch cpu
+    W = torch.from_numpy(W)
+    tic = time.time()
+    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
+    toc = time.time()
+    print('torch-cpu:', tic-toc, r_initial)
+
+    # torch gpu
+    W.to(torch.device('cuda'))
+    tic = time.time()
+    r_initial = torch.max(torch.abs(torch.eig(W, eigenvectors=False)[0]))
+    tac = time.time()
+    print('torch-gpu:', tic-tac, r_initial)
+
+    # scale
+    W_scaled = W * (r_spectral / r_initial)
+    # to-Tensor
+    #W_scaled = torch.from_numpy(W_scaled)
+    
+    return W_scaled.to(device)
+
+
+
 ### PREPROCESS DATA ###
-def preprocess_data(infile='ut.npy'):
+def preprocess_data(infile='../data/kuramoto-sivashinsky/ut.npy'):
     global T, device, dtype
     print('### PREPROCESS DATA ###')
 
@@ -69,9 +94,9 @@ def preprocess_data(infile='ut.npy'):
     return (train.to(device), test.to(device)) 
 
 print('save')
-torch.save(preprocess_data(), 'normalized_ut')
+torch.save(preprocess_data(), '../data/kuramoto-sivashinsky/normalized_ut')
 print('load')
-train, test = torch.load('normalized_ut')
+train, test = torch.load('../data/kuramoto-sivashinsky/normalized_ut')
 print('done')
 
 
